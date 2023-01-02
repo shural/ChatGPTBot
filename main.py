@@ -9,7 +9,8 @@ import telegram.constants
 import toml
 from emoji import emojize
 from loguru import logger
-from revChatGPT.revChatGPT import AsyncChatbot as Chatbot
+#from revChatGPT.revChatGPT import AsyncChatbot as Chatbot
+from revChatGPT.ChatGPT import Chatbot
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import filters, ApplicationBuilder, ContextTypes, CommandHandler, \
     CallbackQueryHandler
@@ -121,7 +122,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.debug(config)
     if chatbot is None:
         try:
-            chatbot = Chatbot(config, conversation_id=None, request_timeout=300)
+#            chatbot = Chatbot(config, conversation_id=None, request_timeout=300)
+            chatbot = Chatbot(config, conversation_id=None, parent_id=None)
             inited = True
         except Exception as e:
             inited = False
@@ -200,7 +202,8 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif chatbot is not None:
         await context.bot.send_chat_action(chat_id=update.effective_chat.id,
                                            action=telegram.constants.ChatAction.TYPING)
-        reply = await chatbot.get_chat_response(update.message.text)
+        reply = chatbot.ask(update.message.text, conversation_id=None, parent_id=None)
+#        reply = await chatbot.get_chat_response(update.message.text)
         reply_msg = reply["message"].encode().decode('utf-8')
         logger.info("Got reply: {}", reply_msg)
         global last_reply
@@ -225,7 +228,7 @@ async def refresh_session(context: ContextTypes.DEFAULT_TYPE):
     try:
         if chatbot is not None:
             chatbot.refresh_session()
-            config_map["chatgpt"]["session_token"] = chatbot.config["session_token"]
+#            config_map["chatgpt"]["session_token"] = chatbot.config["session_token"]
     except Exception as e:
         logger.error(e)
 
@@ -287,8 +290,12 @@ if __name__ == '__main__':
     elif in_Debug:
         logger.debug("Telegram Bot token: {}", config_map["bot"]["token"])
         logger.debug("Allowed users' ID: {}", config_map["bot"]["allow"])
+        logger.debug("OpenAI account: {}", config_map["chatgpt"]["email"])
     config = {
-        "session_token": config_map["chatgpt"]["session_token"]
+#        "session_token": config_map["chatgpt"]["session_token"]
+        "email": config_map["chatgpt"]["email"],
+        "password": config_map["chatgpt"]["password"],
+        "captcha": config_map["chatgpt"]["captcha"]
     }
     logger.info(f"Loading memories from {memory_file}")
     memory_map = memories.LoadMemories(memory_file)
